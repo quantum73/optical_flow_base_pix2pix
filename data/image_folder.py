@@ -52,10 +52,10 @@ def make_dataset(dir, max_dataset_size=float("inf")):
     j = 0
     for root, _, fnames in sorted(os.walk(flow_gt_dir)):
         for fname in sorted(fnames):
-            if is_image_file(fname):                
-                path_real = os.path.join(root, fname)
-                images[j]['B'] = path_real
-                j += 1                
+            # if is_image_file(fname):                
+            path_real = os.path.join(root, fname)
+            images[j]['B'] = path_real
+            j += 1                
     
     return images[:min(max_dataset_size, len(images))]
 

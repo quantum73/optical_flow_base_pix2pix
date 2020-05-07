@@ -3,6 +3,7 @@ from data.base_dataset import BaseDataset, get_params, get_transform
 from data.image_folder import make_dataset
 from PIL import Image
 import numpy as np
+from torchvision import transforms
 
 
 class AlignedDataset(BaseDataset):
@@ -20,7 +21,7 @@ class AlignedDataset(BaseDataset):
         """
         BaseDataset.__init__(self, opt)
         self.dir_AB = os.path.join(opt.dataroot, opt.phase)  # get the image directory
-        self.AB_paths = sorted(make_dataset(self.dir_AB, opt.max_dataset_size))  # get image paths
+        self.AB_paths = make_dataset(self.dir_AB, opt.max_dataset_size) # get image paths
         assert(self.opt.load_size >= self.opt.crop_size)   # crop_size should be smaller than the size of loaded image
         self.input_nc = self.opt.output_nc if self.opt.direction == 'BtoA' else self.opt.input_nc
         self.output_nc = self.opt.input_nc if self.opt.direction == 'BtoA' else self.opt.output_nc
@@ -56,26 +57,30 @@ class AlignedDataset(BaseDataset):
         """
         
         AB_paths = self.AB_paths[index]
-        left_img = np.array(Image.open(AB_paths['A']).convert('RGB'))
-        right_img = np.array(Image.open(AB_paths['C']).convert('RGB'))
+        left_img = Image.open(AB_paths['A']).convert('RGB')
+        right_img = Image.open(AB_paths['C']).convert('RGB')
         flow_noise = np.load(AB_paths['D'])['arr_0']
         flow_gt = np.load(AB_paths['B'])['arr_0']
         
         crop_size = 512
-        img_w, img_h = img.shape
+        img_w, img_h = left_img.size
         min_dim = min(img_w, img_h)
         crop_size = min(crop_size, min_dim)
-        self.crop_indices = transforms.RandomCrop.get_params(img, output_size=(crop_size, crop_size))
+        self.crop_indices = transforms.RandomCrop.get_params(left_img, output_size=(crop_size, crop_size))
         i, j, h, w = self.crop_indices
         
+        left_img = np.array(left_img)
+        right_img = np.array(right_img)
         left_img = left_img[i:i+h, j:j+w, :]
         right_img = right_img[i:i+h, j:j+w, :]
-        flow_noise = flow[i:i+h, j:j+w, :]
+        flow_noise = flow_noise[i:i+h, j:j+w, :]
         
-        A = np.dstack(left_img, right_img, flow_noise)
+        A = np.dstack((left_img, right_img, flow_noise))
         B = flow_gt[i:i+h, j:j+w, :]
+        A = np.transpose(A, (2, 0, 1))
+        B = np.transpose(B, (2, 0, 1))
         
-        return {'A': A, 'B': B, 'A_paths': AB_path}
+        return {'A': A, 'B': B, 'A_paths': AB_paths}
 
     def __len__(self):
         """Return the total number of images in the dataset."""
