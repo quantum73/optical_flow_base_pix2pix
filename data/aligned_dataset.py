@@ -74,7 +74,15 @@ class AlignedDataset(BaseDataset):
         left_img = left_img[i:i+h, j:j+w, :]
         right_img = right_img[i:i+h, j:j+w, :]
         flow_noise = flow_noise[i:i+h, j:j+w, :]
-        
+
+        # normalize data to [-1, 1]
+        left_img = left_img / 255.0 * 2.0 - 1.0
+        right_img = right_img / 255.0 * 2.0 - 1.0
+        flow_gt = flow_gt / 50
+        flow_gt = np.clip(flow_gt, -1.0, 1.0)
+        flow_noise = flow_noise / 50
+        flow_noise = np.clip(flow_noise, -1.0, 1.0)
+
         A = np.dstack((left_img, right_img, flow_noise))
         B = flow_gt[i:i+h, j:j+w, :]
         A = np.transpose(A, (2, 0, 1))
