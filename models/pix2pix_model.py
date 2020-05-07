@@ -1,6 +1,7 @@
 import torch
 from .base_model import BaseModel
 from . import networks
+from util.util import tensor2color
 
 
 class Pix2PixModel(BaseModel):
@@ -46,7 +47,7 @@ class Pix2PixModel(BaseModel):
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
         self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
-        self.visual_names = ['left_img', 'right_img', 'flow_noise', 'pred_flow']
+        self.visual_names = ['left_img', 'right_img', 'flow_noise_vis', 'pred_flow_vis']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
         if self.isTrain:
             self.model_names = ['G', 'D']
@@ -87,14 +88,18 @@ class Pix2PixModel(BaseModel):
         
         self.left_img = self.real_A[:, 0:3, :, :]
         self.right_img = self.real_A[:, 3:6, :, :]
-        self.flow_noise = self.real_A[:, 6:7, :, :]
+        self.flow_noise = self.real_A[:, 6:8, :, :]
         
         self.image_paths = input['A_paths']
 
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG(self.real_A)  # G(A)
-        self.pred_flow = self.fake_B[:, 0:1, :, :]
+        self.pred_flow = self.fake_B[:, 0:2, :, :]
+
+        # flow to color
+        self.flow_noise_vis = tensor2color(self.flow_noise)
+        self.pred_flow_vis = tensor2color(self.pred_flow)
 
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
@@ -109,6 +114,7 @@ class Pix2PixModel(BaseModel):
         # combine loss and calculate gradients
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
         self.loss_D.backward()
+        
 
     def backward_G(self):
         """Calculate GAN and L1 loss for the generator"""
