@@ -73,11 +73,9 @@ class AlignedDataset(BaseDataset):
         flow_noise = flow[i:i+h, j:j+w, :]
         
         A = np.dstack(left_img, right_img, flow_noise)
-        print('A shape', A.shape)
-        B = flow[i:i+h, j:j+w, :]
-        print('B shape', B.shape)
+        B = flow_gt[i:i+h, j:j+w, :]
         
-        return {'A': left_img, 'B': flow_gt, 'A_paths': AB_path}
+        return {'A': A, 'B': B, 'A_paths': AB_path}
 
     def __len__(self):
         """Return the total number of images in the dataset."""

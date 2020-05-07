@@ -82,8 +82,11 @@ class Pix2PixModel(BaseModel):
         # self.real_A = input['A' if AtoB else 'B'].to(self.device)
         # self.real_B = input['B' if AtoB else 'A'].to(self.device)
     
-        self.real_A = input['A'].to(self.device)
-        self.real_B = input['B'].to(self.device)
+        self.real_A = input['A'].to(self.device) # dstack(left, right, flow_noise)
+        self.real_B = input['B'].to(self.device) # gt optical flow
+        
+        self.left_img = self.real_A[:, 0:3, :, :]
+        self.right_img = self.real_A[:, 3:6, :, :]
         
         self.image_paths = input['A_paths']
 
