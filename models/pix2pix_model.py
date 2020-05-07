@@ -46,7 +46,7 @@ class Pix2PixModel(BaseModel):
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
         self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
-        self.visual_names = ['left_img', 'right_img', 'real_B', 'fake_B']
+        self.visual_names = ['left_img', 'right_img', 'flow_noise', 'pred_flow']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
         if self.isTrain:
             self.model_names = ['G', 'D']
@@ -82,17 +82,19 @@ class Pix2PixModel(BaseModel):
         # self.real_A = input['A' if AtoB else 'B'].to(self.device)
         # self.real_B = input['B' if AtoB else 'A'].to(self.device)
     
-        self.real_A = input['A'].to(self.device) # dstack(left, right, flow_noise)
-        self.real_B = input['B'].to(self.device) # gt optical flow
+        self.real_A = input['A'].to(self.device).float() # dstack(left, right, flow_noise)
+        self.real_B = input['B'].to(self.device).float() # gt optical flow
         
         self.left_img = self.real_A[:, 0:3, :, :]
         self.right_img = self.real_A[:, 3:6, :, :]
+        self.flow_noise = self.real_A[:, 6:7, :, :]
         
         self.image_paths = input['A_paths']
 
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG(self.real_A)  # G(A)
+        self.pred_flow = self.fake_B[:, 0:1, :, :]
 
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
