@@ -21,7 +21,7 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
-def make_dataset(dir, max_dataset_size=float("inf")):
+def make_dataset_(dir, max_dataset_size=float("inf")):
     images = []
     assert os.path.isdir(dir), '%s is not a valid directory' % dir
 
@@ -30,6 +30,33 @@ def make_dataset(dir, max_dataset_size=float("inf")):
             if is_image_file(fname):
                 path = os.path.join(root, fname)
                 images.append(path)
+    return images[:min(max_dataset_size, len(images))]
+
+
+def make_dataset(dir, max_dataset_size=float("inf")):
+    images = []
+    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+    left_dir = os.path.join(dir, 'LeftImages')
+    right_dir = os.path.join(dir, 'RightImages')
+    flow_noise_dir = os.path.join(dir, 'OpticalFlowNoise')
+    flow_gt_dir = os.path.join(dir, 'OpticalFlowGT')
+
+    for root, _, fnames in sorted(os.walk(left_dir)):
+        for fname in sorted(fnames):
+            if is_image_file(fname):
+                path_left = os.path.join(root, fname)
+                path_right = os.path.join(right_dir, fname)
+                path_flow_noise = os.path.join(flow_noise_dir, fname.replace('.png', '.npz'))
+                images.append({'A':path_left, 'B':'', 'C':path_right, 'D':path_flow_noise})
+    
+    j = 0
+    for root, _, fnames in sorted(os.walk(flow_gt_dir)):
+        for fname in sorted(fnames):
+            if is_image_file(fname):                
+                path_real = os.path.join(root, fname)
+                images[j]['B'] = path_real
+                j += 1                
+    
     return images[:min(max_dataset_size, len(images))]
 
 

@@ -2,6 +2,7 @@ import os.path
 from data.base_dataset import BaseDataset, get_params, get_transform
 from data.image_folder import make_dataset
 from PIL import Image
+import numpy as np
 
 
 class AlignedDataset(BaseDataset):
@@ -35,7 +36,7 @@ class AlignedDataset(BaseDataset):
             B (tensor) - - its corresponding image in the target domain
             A_paths (str) - - image paths
             B_paths (str) - - image paths (same as A_paths)
-        """
+            
         # read a image given a random integer index
         AB_path = self.AB_paths[index]
         AB = Image.open(AB_path).convert('RGB')
@@ -44,7 +45,7 @@ class AlignedDataset(BaseDataset):
         w2 = int(w / 2)
         A = AB.crop((0, 0, w2, h))
         B = AB.crop((w2, 0, w, h))
-
+        
         # apply the same transform to both A and B
         transform_params = get_params(self.opt, A.size)
         A_transform = get_transform(self.opt, transform_params, grayscale=(self.input_nc == 1))
@@ -52,8 +53,31 @@ class AlignedDataset(BaseDataset):
 
         A = A_transform(A)
         B = B_transform(B)
-
-        return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
+        """
+        
+        AB_paths = self.AB_paths[index]
+        left_img = np.array(Image.open(AB_paths['A']).convert('RGB'))
+        right_img = np.array(Image.open(AB_paths['C']).convert('RGB'))
+        flow_noise = np.load(AB_paths['D'])['arr_0']
+        flow_gt = np.load(AB_paths['B'])['arr_0']
+        
+        crop_size = 512
+        img_w, img_h = img.shape
+        min_dim = min(img_w, img_h)
+        crop_size = min(crop_size, min_dim)
+        self.crop_indices = transforms.RandomCrop.get_params(img, output_size=(crop_size, crop_size))
+        i, j, h, w = self.crop_indices
+        
+        left_img = left_img[i:i+h, j:j+w, :]
+        right_img = right_img[i:i+h, j:j+w, :]
+        flow_noise = flow[i:i+h, j:j+w, :]
+        
+        A = np.dstack(left_img, right_img, flow_noise)
+        print('A shape', A.shape)
+        B = flow[i:i+h, j:j+w, :]
+        print('B shape', B.shape)
+        
+        return {'A': left_img, 'B': flow_gt, 'A_paths': AB_path}
 
     def __len__(self):
         """Return the total number of images in the dataset."""
